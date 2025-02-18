@@ -1,58 +1,45 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
-import { useSearchParams } from "react-router-dom"; // <-- Import this
+import { isSignedIn } from "@/lib/gmail";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AuthCallback() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const [searchParams] = useSearchParams();
-  const code = searchParams.get("code"); // <-- Get OAuth code from URL
 
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        if (!code) {
-          throw new Error("No authorization code found");
+        // Check if the user was successfully authenticated
+        const signedIn = await isSignedIn();
+        
+        if (signedIn) {
+          toast({
+            title: "Success",
+            description: "Successfully signed in with Google",
+          });
+        } else {
+          toast({
+            title: "Error",
+            description: "Failed to sign in with Google",
+            variant: "destructive",
+          });
         }
-
-        // Send the authorization code to your backend API
-        const response = await fetch("https://gmail-tracker-2025.onrender.com/api/auth/google", {
-          method: "POST",
-          body: JSON.stringify({ code }),
-          headers: { "Content-Type": "application/json" },
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to exchange code for token");
-        }
-
-        const data = await response.json();
-        console.log("Authentication successful:", data);
-
-        toast({
-          title: "Success",
-          description: "Successfully signed in with Google",
-        });
-
-        // Optionally, store the token in localStorage or context
-        localStorage.setItem("token", data.token);
       } catch (error) {
-        console.error("Auth error:", error);
-
         toast({
           title: "Error",
-          description: "Authentication failed",
+          description: "An error occurred during authentication",
           variant: "destructive",
         });
       } finally {
-        setLocation("/"); // Redirect to home page
+        // Redirect back to home page regardless of the outcome
+        setLocation("/");
       }
     };
 
     handleCallback();
-  }, [code, setLocation]);
+  }, [setLocation]);
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center gap-4">
